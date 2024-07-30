@@ -8,6 +8,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 # Load environment variables from .env file
 load_dotenv()
 token = os.getenv('TELEGRAM_BOT_TOKEN')
+recaptcha_token = os.getenv('RECAPTCHA_TOKEN')
 
 # Function to start the bot
 def start(update: Update, context: CallbackContext) -> None:
@@ -25,32 +26,47 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     
     if not cleaned_input[0].isdigit():
         if pattern.match(cleaned_input):
-            # Call the endpoint with the cleaned cedula
-            endpoint = f"https://tvtcrhau2vo336qa5r66p3bygy0hazyk.lambda-url.us-east-1.on.aws/?cedula={cleaned_input}"
-            response = requests.get(endpoint)
+            # Call the first endpoint with the cleaned cedula
+            endpoint1 = f"https://tvtcrhau2vo336qa5r66p3bygy0hazyk.lambda-url.us-east-1.on.aws/?cedula={cleaned_input}"
+            response = requests.get(endpoint1)
+            
             if response.status_code == 200:
                 data = response.json()
                 image_url = data.get('url')
                 if image_url:
-                    # Download the image
-                    image_response = requests.get(image_url)
-                    if image_response.status_code == 200:
-                        image_path = 'acta.jpg'
-                        with open(image_path, 'wb') as image_file:
-                            image_file.write(image_response.content)
-                        
-                        # Send the image back to the user as a document
-                        update.message.reply_document(document=open(image_path, 'rb'))
-                    else:
-                        update.message.reply_text('Lo siento, no se pudo descargar la imagen del acta.')
+                    send_image(update, image_url)
                 else:
                     update.message.reply_text('Lo siento, no se encontró la URL de la imagen en la respuesta.')
             else:
-                update.message.reply_text('Lo siento, hubo un error al consultar el acta en el servidor.')
+                # If the first endpoint fails, call the second endpoint
+                endpoint2 = f"https://37latuqm766patrerdf5rvdhqe0wgrug.lambda-url.us-east-1.on.aws/?cedula={cleaned_input}&recaptcha={recaptcha_token}"
+                response = requests.get(endpoint2)
+                if response.status_code == 200:
+                    data = response.json()
+                    image_url = data.get('url')
+                    if image_url:
+                        send_image(update, image_url)
+                    else:
+                        update.message.reply_text('Lo siento, no se encontró la URL de la imagen en la respuesta.')
+                else:
+                    update.message.reply_text('Lo siento, hubo un error al consultar el acta en el servidor.')
         else:
             update.message.reply_text('Cédula no válida. Por favor, proporciona una cédula en uno de estos formatos: V12345678, E12345678, J12345678 o P12345678.')
     else:
         update.message.reply_text('La cédula debe empezar con V, E, J o P.')
+
+def send_image(update: Update, image_url: str) -> None:
+    # Download the image
+    image_response = requests.get(image_url)
+    if image_response.status_code == 200:
+        image_path = 'acta.jpg'
+        with open(image_path, 'wb') as image_file:
+            image_file.write(image_response.content)
+        
+        # Send the image back to the user as a document
+        update.message.reply_document(document=open(image_path, 'rb'))
+    else:
+        update.message.reply_text('Lo siento, no se pudo descargar la imagen del acta.')
 
 def main() -> None:
     # Your bot token
