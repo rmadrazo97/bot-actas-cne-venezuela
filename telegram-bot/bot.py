@@ -2,7 +2,7 @@ import os
 import re
 import requests
 from dotenv import load_dotenv
-from telegram import Update, InputFile
+from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # Load environment variables from .env file
@@ -18,7 +18,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     user_input = update.message.text.strip()
     
     # Regex to validate the cedula
-    pattern = re.compile(r'^[V|E|J|P][0-9]{5,9}$', re.IGNORECASE)
+    pattern = re.compile(r'^[VEJPvejp][0-9]{5,9}$')
     
     # Clean up the input
     cleaned_input = re.sub(r'[^0-9A-Za-z]', '', user_input).upper()
@@ -39,8 +39,8 @@ def handle_message(update: Update, context: CallbackContext) -> None:
                         with open(image_path, 'wb') as image_file:
                             image_file.write(image_response.content)
                         
-                        # Send the image back to the user
-                        update.message.reply_photo(photo=open(image_path, 'rb'))
+                        # Send the image back to the user as a document
+                        update.message.reply_document(document=open(image_path, 'rb'))
                     else:
                         update.message.reply_text('Lo siento, no se pudo descargar la imagen del acta.')
                 else:
