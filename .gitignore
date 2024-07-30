@@ -106,10 +106,6 @@ dmypy.json
 # VS Code
 .vscode/
 
-# Docker
-**/Dockerfile*
-**/docker-compose*
-
 # macOS
 .DS_Store
 .AppleDouble
